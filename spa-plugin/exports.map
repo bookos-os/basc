@@ -1,0 +1,10 @@
+/* Lo mismo que exportan los plugins de códec de PipeWire. Ocultar el resto
+ * evita que los símbolos opus_* de nuestro CELT modificado choquen con la
+ * libopus del sistema que carga el plugin opus en el mismo proceso. */
+{
+  global:
+    spa_handle_factory_enum;
+    spa_log_topic_enum;
+  local:
+    *;
+};

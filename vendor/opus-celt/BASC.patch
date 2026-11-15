@@ -1,0 +1,157 @@
+diff -ru -x BASC.patch -x README.md opus-1.6/celt/celt_decoder.c opus-celt/celt/celt_decoder.c
+--- opus-1.6/celt/celt_decoder.c	2026-11-12 00:37:45.418673128 +0100
++++ opus-celt/celt/celt_decoder.c	2026-11-12 00:38:12.611435074 +0100
+@@ -1335,8 +1335,10 @@
+          octave = ec_dec_uint(dec, 6);
+          postfilter_pitch = (16<<octave)+ec_dec_bits(dec, 4+octave)-1;
+          qg = ec_dec_bits(dec, 3);
++#ifndef BASC_SSC /* SSC no codifica el tapset del postfiltro */
+          if (ec_tell(dec)+2<=total_bits)
+             postfilter_tapset = ec_dec_icdf(dec, tapset_icdf, 2);
++#endif
+          postfilter_gain = QCONST16(.09375f,15)*(qg+1);
+       }
+       tell = ec_tell(dec);
+diff -ru -x BASC.patch -x README.md opus-1.6/celt/celt_encoder.c opus-celt/celt/celt_encoder.c
+--- opus-1.6/celt/celt_encoder.c	2026-11-12 00:37:45.419673116 +0100
++++ opus-celt/celt/celt_encoder.c	2026-11-12 00:38:12.609452657 +0100
+@@ -2046,7 +2046,9 @@
+          ec_enc_bits(enc, pitch_index-(16<<octave), 4+octave);
+          pitch_index -= 1;
+          ec_enc_bits(enc, qg, 3);
++#ifndef BASC_SSC /* SSC no codifica el tapset del postfiltro */
+          ec_enc_icdf(enc, prefilter_tapset, tapset_icdf, 2);
++#endif
+       }
+    }
+    if (LM>0 && ec_tell(enc)+3<=total_bits)
+diff -ru -x BASC.patch -x README.md opus-1.6/celt/mfrngcod.h opus-celt/celt/mfrngcod.h
+--- opus-1.6/celt/mfrngcod.h	2026-11-12 00:37:45.427673021 +0100
++++ opus-celt/celt/mfrngcod.h	2026-11-12 00:38:12.601341874 +0100
+@@ -34,7 +34,14 @@
+ /*The number of bits to output at a time.*/
+ # define EC_SYM_BITS   (8)
+ /*The total number of bits in each of the state registers.*/
++#ifdef BASC_SSC
++/* SSC: el codificador de rango trabaja con 24 bits (rng < 0x8001, acarreo
++   con val >> 15). Medido con Ghidra sobre ec_encode y validado decodificando
++   tramas reales del S22 Ultra. */
++# define EC_CODE_BITS  (24)
++#else
+ # define EC_CODE_BITS  (32)
++#endif
+ /*The maximum symbol value.*/
+ # define EC_SYM_MAX    ((1U<<EC_SYM_BITS)-1)
+ /*Bits to shift by to move a symbol into the high-order position.*/
+diff -ru -x BASC.patch -x README.md opus-1.6/celt/modes.c opus-celt/celt/modes.c
+--- opus-1.6/celt/modes.c	2026-11-12 00:37:45.428673010 +0100
++++ opus-celt/celt/modes.c	2026-11-12 03:37:39.263484371 +0100
+@@ -39,14 +39,36 @@
+ #include "quant_bands.h"
+ #include "cpu_support.h"
+ 
++#ifdef BASC_SSC
++/* SSC: 22 bandas en unidades de bin de la MDCT corta (108 bins a 48 kHz).
++   Leídas de la tabla de libScalable_Encoder.so (0x149d0). */
++static const opus_int16 eband5ms[] = {0,1,2,3,4,5,6,7,8,10,12,14,16,20,24,28,34,40,48,60,72,84,102};
++#else
+ static const opus_int16 eband5ms[] = {
+ /*0  200 400 600 800  1k 1.2 1.4 1.6  2k 2.4 2.8 3.2  4k 4.8 5.6 6.8  8k 9.6 12k 15.6 */
+   0,  1,  2,  3,  4,  5,  6,  7,  8, 10, 12, 14, 16, 20, 24, 28, 34, 40, 48, 60, 78, 100
+ };
++#endif
+ 
+ /* Alternate tuning (partially derived from Vorbis) */
+ #define BITALLOC_SIZE 11
+ /* Bit allocation table in units of 1/32 bit/sample (0.1875 dB SNR) */
++#ifdef BASC_SSC
++/* SSC: tabla de reparto propia, 11 filas x 22 bandas (libScalable_Encoder.so). */
++static const unsigned char band_allocation[] = {
++  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
++118,110,103, 93, 86, 79, 74, 69, 65, 58, 52, 46, 43, 35, 26, 18,  6,  1,  0,  0,  0,  0,
++126,119,112,103, 95, 88, 82, 77, 72, 65, 59, 53, 50, 42, 35, 27, 19, 13,  2,  0,  0,  0,
++134,127,120,113,103, 96, 90, 84, 78, 71, 65, 60, 57, 50, 43, 37, 30, 24, 17, 10,  4,  0,
++144,137,130,123,113,106,100, 94, 88, 81, 75, 70, 67, 60, 53, 47, 40, 34, 27, 16,  6,  0,
++152,145,138,131,123,116,110,104, 98, 91, 85, 80, 77, 70, 63, 57, 50, 44, 37, 21,  8,  0,
++162,155,148,141,133,126,120,114,111,108,101, 95, 90, 87, 80, 73, 67, 60, 54, 47, 11,  0,
++172,165,158,151,143,136,130,124,121,118,111,105,100, 97, 96, 95, 90, 80, 70, 60, 20,  0,
++177,170,163,156,148,141,135,129,128,125,118,112,110,107,116,105,100, 87, 75, 65, 23,  0,
++182,180,173,166,158,151,145,139,138,135,132,130,130,130,130,128,120,110, 98, 85, 28,  0,
++200,200,200,200,200,200,200,200,200,200,200,200,196,192,188,184,180,175,160,145,113,  1
++};
++#else
+ static const unsigned char band_allocation[] = {
+ /*0  200 400 600 800  1k 1.2 1.4 1.6  2k 2.4 2.8 3.2  4k 4.8 5.6 6.8  8k 9.6 12k 15.6 */
+   0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+@@ -61,6 +83,7 @@
+ 172,165,158,152,143,137,131,125,118,112,106,100, 94, 87, 81, 75, 69, 63, 56, 45, 20,
+ 200,200,200,200,200,200,200,200,198,193,188,183,178,173,168,163,158,153,148,129,104,
+ };
++#endif
+ 
+ #ifndef CUSTOM_MODES_ONLY
+  #ifdef FIXED_POINT
+@@ -93,7 +116,13 @@
+    int i, j, lin, low, high, nBark, offset=0;
+ 
+    /* All modes that have 2.5 ms short blocks use the same definition */
++#ifdef BASC_SSC
++   /* Único modo admitido (ver opus_custom_mode_create): 108 bins por MDCT
++      corta. Las tablas de SSC se usan tal cual, sin las bandas Bark. */
++   if (Fs == 48000 && frame_size == 108)
++#else
+    if (Fs == 400*(opus_int32)frame_size)
++#endif
+    {
+       *nbEBands = sizeof(eband5ms)/sizeof(eband5ms[0])-1;
+       eBands = opus_alloc(sizeof(opus_int16)*(*nbEBands+1));
+@@ -179,7 +208,11 @@
+    }
+ 
+    /* Check for standard mode */
++#ifdef BASC_SSC
++   if (mode->Fs == 48000 && mode->shortMdctSize == 108)
++#else
+    if (mode->Fs == 400*(opus_int32)mode->shortMdctSize)
++#endif
+    {
+       for (i=0;i<BITALLOC_SIZE*mode->nbEBands;i++)
+          allocVectors[i] = band_allocation[i];
+@@ -241,7 +274,19 @@
+ #endif
+ #endif
+ 
+-#ifndef CUSTOM_MODES_ONLY
++#ifdef BASC_SSC
++   /* Con BASC_SSC el codificador de rango y las tablas son los de SSC: ningún
++      otro modo es válido. En particular, los estáticos de Opus (p. ej.
++      48000/960) saldrían con 21 bandas y rango de 24 bits, y un modo con
++      menos de 102 bins por MDCT corta desbordaría las bandas de SSC. */
++   if (Fs != 48000 || frame_size != 864)
++   {
++      if (error)
++         *error = OPUS_BAD_ARG;
++      return NULL;
++   }
++#endif
++#if !defined(CUSTOM_MODES_ONLY) && !defined(BASC_SSC)
+    for (i=0;i<TOTAL_MODES;i++)
+    {
+       int j;
+@@ -349,7 +394,16 @@
+       mode->preemph[3] =  QCONST16(1.3333740234f, 13);
+    } else /* 48 kHz */
+    {
++#ifdef BASC_SSC
++      /* SSC no aplica pre-énfasis y los Buds no deshacen ninguna: decodificar
++         con libopus las tramas del S22 da exactamente la des-énfasis
++         1/(1-0,85z^-1) frente a la fuente (+16 dB en graves, +14,3 dB a 1 kHz,
++         +8 a 3 kHz, -5,5 en 16-20 kHz; E5, 12-11-2026). Con 0,85 los graves
++         llegaban 16 dB más flojos. */
++      mode->preemph[0] =  QCONST16(0.0f, 15);
++#else
+       mode->preemph[0] =  QCONST16(0.8500061035f, 15);
++#endif
+       mode->preemph[1] =  QCONST16(0.0f, 15);
+       mode->preemph[2] =  QCONST16(1.f, SIG_SHIFT);
+       mode->preemph[3] =  QCONST16(1.f, 13);

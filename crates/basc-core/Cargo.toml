@@ -1,0 +1,15 @@
+[package]
+name = "basc-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+# staticlib: lo enlaza el plugin SPA de PipeWire (spa-plugin/).
+crate-type = ["rlib", "staticlib"]
+
+[dependencies]
+thiserror = "2"
+
+[build-dependencies]
+cc = "1"

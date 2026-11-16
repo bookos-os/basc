@@ -11,7 +11,7 @@
 # versiones llevan el mismo EQ y se pueden comparar.
 set -eu
 aqui="$(cd "$(dirname "$0")/.." && pwd)"
-mac=E8:C9:13:E0:E6:DA
+mac="${BASC_MAC:?define BASC_MAC con la MAC de los Buds}"
 eq=0 desde=0 durante=60
 while [ $# -gt 1 ]; do
     case "$1" in

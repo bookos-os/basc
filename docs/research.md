@@ -12,7 +12,7 @@
 | Plugins de códec SPA | aac, faststream, g722, hfp-*, lc3, ldac, opus, opus-g, sbc. **No** aptx ni lc3plus | `ls /usr/lib64/spa-0.2/bluez5/` |
 | Herramientas | `btmon` sí; `adb`, `tshark`, `qemu-aarch64` no | `which` |
 
-Auriculares: Buds3 Pro `E8:C9:13:E0:E6:DA`, conectados al PC por AAC.
+Auriculares: Buds3 Pro, conectados al PC por AAC.
 Teléfono de referencia: Galaxy S22 Ultra, con SSC normal y **sin** SSC‑UHQ
 (según la usuaria, por hardware). No hay emisor UHQ disponible.
 

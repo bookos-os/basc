@@ -10,7 +10,7 @@ BASC (*BookOS Adaptive Sound Codec*) es una implementación independiente del
 códec Bluetooth **SSC de Samsung** para Linux, con la que un PC envía audio a
 unos **Galaxy Buds3 Pro** como lo hace un móvil Samsung. Hardware de pruebas:
 Galaxy Book5 Pro (Fedora 44, kernel 7.2, PipeWire 1.6.11, WirePlumber
-0.5.19, BlueZ 5.87), Buds3 Pro `E8:C9:13:E0:E6:DA` y un Galaxy S22 Ultra como
+0.5.19, BlueZ 5.87), Buds3 Pro y un Galaxy S22 Ultra como
 emisor de referencia.
 
 ## Estado: qué funciona y está probado con hardware

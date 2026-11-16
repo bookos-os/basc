@@ -34,7 +34,7 @@ RUTA_EP = "/basc/ssc_source"
 PRECARGA = 5
 
 volcado, primera, cuantas = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-mac = sys.argv[4] if len(sys.argv) > 4 else "E8:C9:13:E0:E6:DA"
+mac = sys.argv[4] if len(sys.argv) > 4 else os.environ["BASC_MAC"]
 disp = "/org/bluez/hci0/dev_" + mac.replace(":", "_")
 
 

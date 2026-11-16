@@ -11,7 +11,7 @@
 #   perfil A2DP fuerza a PipeWire a negociar de nuevo (AAC). Sin esto, los
 #   widgets se quedan en «esperando dispositivo».
 set -u
-mac="${4:-E8:C9:13:E0:E6:DA}"
+mac="${4:-${BASC_MAC:?pasa la MAC o define BASC_MAC}}"
 dev="/org/bluez/hci0/dev_$(echo "$mac" | tr : _)"
 a2dp=0000110b-0000-1000-8000-00805f9b34fb
 
